@@ -1,63 +1,68 @@
 import { AdditionNode, HydraNotation, Node, NumberNode } from "./notation";
+import { deal } from "./utils";
 
 export function isSuccessor(node: Node): boolean {
-  if (node.nodeType == "n") return true;
 
-  if (node.nodeType == "add") {
-    var na = node as AdditionNode;
-    if (na.nodes.length == 0) return false;
-    return isSuccessor(na.nodes[-1]);
+  if (node.nodeType == 'hydra')
+    return false
+
+  if (node.nodeType == 'n')
+    return (node as NumberNode).value >= 1
+
+  if (node.nodeType == 'add') {
+    var nAdd = node as AdditionNode
+
+    if (nAdd.nodes.length == 0) return false
+
+    return isSuccessor(nAdd.nodes[-1])
   }
 
-  return false;
+  return false
 }
 
-export function toOrigin(node: Node): boolean {
-  if (node.nodeType == "n") {
-    var nn = node as NumberNode;
+export function toOrigin(node: Node): Node | boolean {
 
-    nn.value -= 1;
+  if (!isSuccessor(node))
+    return false
 
-    return nn.value < 1;
+  if (node.nodeType == 'hydra')
+    return false
+
+  if (node.nodeType == 'n') {
+    var nn = node as NumberNode
+    nn.value -= 1
+    if (nn.value < 1)
+      return true
   }
 
-  if (node.nodeType == "add") {
-    var na = node as AdditionNode;
+  if (node.nodeType == 'add') {
+    var nAdd = node as AdditionNode
 
-    if (na.nodes.length == 0) return true;
+    if (nAdd.nodes.length == 0)
+      return true
 
-    if (toOrigin(na.nodes[-1])) {
-      na.nodes.pop();
-      return na.nodes.length <= 0;
-    }
+    deal(toOrigin(nAdd.nodes[-1]), () => nAdd.nodes.pop(), (n: Node) => nAdd.nodes[-1] = n)
+
+    if (nAdd.nodes.length == 0)
+      return true
+
+    if (nAdd.nodes.length == 1)
+      return nAdd.nodes[-1]
   }
 
-  return false;
+  return false
 }
 
 export function isSuccessorNotation(notation: HydraNotation): boolean {
-  if (notation.root == null) return false;
+  if (notation.root == undefined)
+    return false
 
-  return isSuccessor(notation.root);
+  return isSuccessor(notation.root)
 }
 
 export function toOriginNotation(notation: HydraNotation): void {
-  if (notation.root == null) return;
+  if (notation.root == undefined)
+    return
 
-  if (toOrigin(notation.root)) {
-    if (notation.root.nodeType == "n") {
-      notation.root = undefined;
-      return;
-    }
-
-    if (notation.root.nodeType == "add") {
-      var na = notation.root as AdditionNode;
-
-      if (na.nodes.length == 0) notation.root = undefined;
-
-      notation.root = na.nodes[0];
-
-      return;
-    }
-  }
+  deal(toOrigin(notation.root), () => notation.root = undefined, (n: Node) => notation.root = n)
 }

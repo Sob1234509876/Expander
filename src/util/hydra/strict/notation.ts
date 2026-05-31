@@ -23,3 +23,10 @@ export type NumberNode = Node & {
   nodeType: "n";
   value: number;
 };
+
+export function n(m: number): NumberNode {
+  return {
+    nodeType: 'n',
+    value: m,
+  };
+};

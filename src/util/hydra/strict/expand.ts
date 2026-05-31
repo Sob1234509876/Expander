@@ -1,84 +1,45 @@
-import { AdditionNode, HydraNode, HydraNotation, Node } from "./notation";
 import _ from "lodash";
+import { AdditionNode, HydraNode, HydraNotation, n, Node } from "./notation";
+import { hasNext } from "./iterate";
+import { deal } from "./utils";
 
-export function expand(
-    node: Node,
-    badRoot: Node,
-    canExpand: (n: Node) => boolean,
-    m: number,
-): Node | boolean {
-    if (node.nodeType == "n") return false;
+export function expand(node: Node, expanded: Node, needReplace: (node: Node) => boolean): Node | boolean {
+    if (needReplace(node))
+        return expanded
 
-    if (node.nodeType == "add") {
-        var na = node as AdditionNode;
+    if (node.nodeType == 'n')
+        return false
 
-        if (na.nodes.length == 0) return true;
+    if (node.nodeType == 'add') {
+        var nAdd = node as AdditionNode
+        if (nAdd.nodes.length == 0)
+            return true
 
-        var res = expand(na.nodes[-1], badRoot, canExpand, m);
+        deal(expand(nAdd.nodes[-1], expanded, needReplace), () => nAdd.nodes.pop(), (n: Node) => nAdd.nodes[-1] = n)
 
-        if (typeof res == "boolean") {
-            if (res) na.nodes.pop();
-        } else {
-            na.nodes[-1] = res;
-        }
+        if (nAdd.nodes.length == 0)
+            return true
 
-        if (na.nodes.length == 0) return true;
-
-        if (na.nodes.length == 1) return na.nodes[0];
+        if (nAdd.nodes.length == 1)
+            return nAdd.nodes[-1]
     }
 
-    if (node.nodeType == "hydra") {
-        var nh = node as HydraNode;
+    if (node.nodeType == 'hydra') {
+        var nHydra = node as HydraNode
+        var index = hasNext(nHydra)
 
-        if (nh.nodes.length == 0) return true;
+        deal(expand(nHydra.nodes[index] as Node, expanded, needReplace), () => nHydra.nodes[index] = undefined, (n: Node) => nHydra.nodes[index] = n)
 
-        var index = nh.nodes.length - 1;
-
-        while (index >= 0) if (nh.nodes[index] == undefined) index--;
-
-        if (index == -1) return false;
-
-        if (!canExpand(nh)) {
-            var res = expand(nh.nodes[index] as Node, badRoot, canExpand, m);
-
-            if (typeof res == "boolean") {
-                if (res) nh.nodes[index] = undefined;
-            } else {
-                nh.nodes[index] = res;
-            }
-
-            return false;
-        }
-
-        if (m < 1) return true;
-
-        nh.nodes[index] = _.cloneDeep(badRoot);
-        var res = expand(nh.nodes[index] as Node, badRoot, canExpand, m - 1);
-
-        if (typeof res == "boolean") {
-            if (res) nh.nodes[index] = undefined;
-        } else {
-            nh.nodes[index] = res;
-        }
+        return false
     }
 
-    return false;
+    return false
 }
 
-export function expandNotation(
-    notation: HydraNotation,
-    badRoot: (n: HydraNotation) => Node,
-    canExpand: (n: Node) => boolean,
-    m: number): void {
+export function expandNotation(notation: HydraNotation, expanded: Node, needReplace: (node: Node) => boolean): void {
 
     if (notation.root == undefined)
         return
 
-    var res = expand(notation.root, badRoot(notation), canExpand, m)
-    if (typeof res == 'boolean') {
-        if (res)
-            notation.root = undefined
-    } else {
-        notation.root = res
-    }
+    deal(expand(notation.root, expanded, needReplace), () => notation.root = undefined, (n: Node) => notation.root = n)
 }
